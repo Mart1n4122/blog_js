@@ -36,12 +36,12 @@ if (userCount === 0) {
     VALUES (?, ?, ?, ?, ?, ?)
   `);
   const now = new Date().toISOString();
-  insertBlog.run(user1, 'JavaScript tippek', 'Programozás', 'Tartalom 1', now, now);
-  insertBlog.run(user1, 'Express bevezető', 'Webfejlesztés', 'Tartalom 2', now, now);
-  insertBlog.run(user2, 'Horgolás kezdőknek', 'Hobbi', 'Tartalom 3', now, now);
-  insertBlog.run(user2, 'Kötés haladóknak', 'Hobbi', 'Tartalom 4', now, now);
-  insertBlog.run(user3, 'Edzésterv', 'Fitness', 'Tartalom 5', now, now);
-  insertBlog.run(user3, 'Táplálkozás', 'Egészség', 'Tartalom 6', now, now);
+  insertBlog.run(user1, 'JavaScript tippek', 'Programozás', 'Írd meg helyesen a kódot!!!', now, now);
+  insertBlog.run(user1, 'Express bevezető', 'Webfejlesztés', 'Hogy kell középre rakni egy divet?', now, now);
+  insertBlog.run(user2, 'Horgolás kezdőknek', 'Hobbi', 'Fogj halat.', now, now);
+  insertBlog.run(user2, 'Kötés haladóknak', 'Hobbi', 'Masnika', now, now);
+  insertBlog.run(user3, 'Edzésterv', 'Fitness', 'Jó táplálkozás, heti 3 edzés legalább.', now, now);
+  insertBlog.run(user3, 'Táplálkozás', 'Egészség', 'Sok hús, kevés cukor.', now, now);
 }
 
 

@@ -1,42 +1,53 @@
 const API_URL = 'http://localhost:8080';
 
 async function fetchBlogs() {
-  const res = await fetch(`${API_URL}/api/blogs`);
-  const blogs = await res.json();
-  renderBlogs(blogs);
-}
-
-function renderBlogs(blogs) {
-  const container = document.getElementById('blogs');
-  const searchValue = document.getElementById('search').value.toLowerCase();
-  container.innerHTML = '';
-  blogs
-    .filter(blog => blog.title.toLowerCase().includes(searchValue))
-    .forEach(blog => {
-      const div = document.createElement('div');
-      div.className = 'blog';
-      div.innerHTML = `
-        <h3>${blog.title} <small>(${blog.category})</small></h3>
-        <p><em>${blog.author}</em> - ${new Date(blog.created_at).toLocaleString()}</p>
-        <p>${blog.content}</p>
-        <button onclick="deleteBlog(${blog.id})">Törlés</button>
-      `;
-      container.appendChild(div);
-    });
-}
-
-async function fetchUsers() {
-  const res = await fetch(`${API_URL}/api/users`);
-  const users = await res.json();
-  const select = document.getElementById('user_id');
-  select.innerHTML = '';
-  users.forEach(u => {
-    const option = document.createElement('option');
-    option.value = u.id;
-    option.textContent = u.name;
-    select.appendChild(option);
-  });
-}
+    try {
+      const res = await fetch(`${API_URL}/api/blogs`);
+      if (!res.ok) {
+        throw new Error(`Hálózati hiba: ${res.status} - ${res.statusText}`);
+      }
+      const blogs = await res.json();
+      console.log('Kapott blogok:', blogs);
+      renderBlogs(blogs);
+    } catch (err) {
+      console.error('fetchBlogs hiba:', err);
+    }
+  }
+  function fetchUsers(selectedUserId = null) {
+    return fetch(`${API_URL}/api/users`)
+      .then(res => res.json())
+      .then(users => {
+        const newPostSelect = document.getElementById('user_id');
+        const editSelect = document.getElementById('edit-user-id');
+  
+        newPostSelect.innerHTML = '';
+        editSelect.innerHTML = '';
+  
+        users.forEach(u => {
+          const option1 = document.createElement('option');
+          option1.value = u.id;
+          option1.textContent = u.name;
+          newPostSelect.appendChild(option1);
+  
+          const option2 = document.createElement('option');
+          option2.value = u.id;
+          option2.textContent = u.name;
+  
+          if (selectedUserId != null && parseInt(u.id) === parseInt(selectedUserId)) {
+            option2.selected = true;
+          }
+  
+          editSelect.appendChild(option2);
+        });
+      });
+  }
+  
+function resetFormsView() {
+    document.getElementById('blog-form').style.display = 'block';
+    document.getElementById('author-form').style.display = 'block';
+    document.getElementById('edit-blog-form').style.display = 'none';
+    document.getElementById('edit-section').style.display = 'none';
+  } 
 
 document.getElementById('blog-form').addEventListener('submit', async e => {
   e.preventDefault();
@@ -87,64 +98,117 @@ document.getElementById('author-form').addEventListener('submit', async e => {
     const container = document.getElementById('blogs');
     const searchValue = document.getElementById('search').value.toLowerCase();
     container.innerHTML = '';
+  
     blogs
       .filter(blog => blog.title.toLowerCase().includes(searchValue))
       .forEach(blog => {
+        const authorName = blog.author || blog.user?.name || 'Ismeretlen szerző';
+  
+        let createdDate = 'Ismeretlen időpont';
+        if (blog.created_at) {
+          const d = new Date(blog.created_at);
+          createdDate = d.toISOString().split('T')[0]; 
+        }
+  
+        let updatedDate = 'Nincs módosítás';
+        if (blog.updated_at) {
+          const d2 = new Date(blog.updated_at);
+          updatedDate = d2.toISOString().split('T')[0];
+        }
+  
         const div = document.createElement('div');
         div.className = 'blog';
         div.innerHTML = `
           <h3>${blog.title} <small>(${blog.category})</small></h3>
-          <p><em>${blog.author}</em> - Létrehozva: ${new Date(blog.created_at).toLocaleString()}</p>
+          <p><em>${authorName}</em> - Létrehozva: ${createdDate}</p>
+          <p><strong>Utolsó módosítás:</strong> ${updatedDate}</p>
           <p>${blog.content}</p>
-          <button class="edit-button" onclick="editBlog(${blog.id})">Szerkesztés</button>
-          <button onclick="deleteBlog(${blog.id})">Törlés</button>
+          <button class="edit-button">Szerkesztés</button>
+          <button class="delete-button">Törlés</button>
         `;
+        
+        const editBtn = div.querySelector('.edit-button');
+        editBtn.addEventListener('click', () => editBlog(blog.id));
+        
+        const deleteBtn = div.querySelector('.delete-button');
+        deleteBtn.addEventListener('click', () => deleteBlog(blog.id));
+        
         container.appendChild(div);
       });
   }
+  
 
   async function editBlog(id) {
-    const res = await fetch(`${API_URL}/api/blogs/${id}`);
-    const blog = await res.json();
+    try {
+      const res = await fetch(`${API_URL}/api/blogs/${id}`);
+      if (!res.ok) {
+        throw new Error('Nem sikerült betölteni a blog adatait.');
+      }
   
-    document.getElementById('edit-blog-id').value = blog.id;
-    document.getElementById('edit-user-id').value = blog.user_id;
-    document.getElementById('edit-title').value = blog.title;
-    document.getElementById('edit-category').value = blog.category;
-    document.getElementById('edit-content').value = blog.content;
-
-    document.getElementById('edit-blog-form').style.display = 'block';
+      const blog = await res.json();
   
-    document.getElementById('blog-form').style.display = 'none';
-
-    document.getElementById('author-form').style.display = 'none';
+      await fetchUsers(blog.user_id || blog.user?.id || null);
+  
+      document.getElementById('edit-blog-id').value = blog.id;
+      document.getElementById('edit-user-id').value = blog.user_id || blog.user?.id || '';
+      document.getElementById('edit-title').value = blog.title;
+      document.getElementById('edit-category').value = blog.category;
+      document.getElementById('edit-content').value = blog.content;
+  
+      document.getElementById('edit-blog-form').style.display = 'block';
+      document.getElementById('edit-section').style.display = 'block';
+  
+      document.getElementById('blog-form').style.display = 'none';
+      document.getElementById('author-form').style.display = 'none';
+    } catch (error) {
+      alert(`Hiba: ${error.message}`);
+    }
   }
+  
+  document.getElementById('edit-blog-form').addEventListener('submit', async e => {
+    e.preventDefault();
+  
+    const id = parseInt(document.getElementById('edit-blog-id').value, 10);
+    const user_id = parseInt(document.getElementById('edit-user-id').value, 10);
+    const title = document.getElementById('edit-title').value;
+    const category = document.getElementById('edit-category').value;
+    const content = document.getElementById('edit-content').value;
+  
+    const res = await fetch(`${API_URL}/api/blogs/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id, title, category, content })
+    });
+  
+    if (!res.ok) {
+      const err = await res.json();
+      alert(`Hiba: ${err.error || res.statusText}`);
+      return;
+    }
+  
+    alert('Bejegyzés sikeresen frissítve!');
 
-document.getElementById('edit-blog-form').addEventListener('submit', async e => {
-e.preventDefault();
+const editForm = document.getElementById('edit-blog-form');
+editForm.style.display = 'none';
+editForm.reset();
 
-/* const res = await fetch(`${API_URL}/api/blogs/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user_id, title, category, content })
-}); */
+document.getElementById('edit-section').style.display = 'none';
 
-if (!res.ok) {
-    const err = await res.json();
-    alert(`Hiba: ${err.error || res.statusText}`);
-    return;
-}
-
-alert('Bejegyzés sikeresen frissítve!');
-document.getElementById('edit-blog-form').style.display = 'none';
 document.getElementById('blog-form').style.display = 'block';
+document.getElementById('author-form').style.display = 'block';
+
 fetchBlogs();
 });
 
 document.getElementById('cancel-edit').addEventListener('click', () => {
-document.getElementById('edit-blog-form').style.display = 'none';
-document.getElementById('blog-form').style.display = 'block';
-});
+    const editForm = document.getElementById('edit-blog-form');
+    editForm.style.display = 'none';
+    editForm.reset();
+  
+    document.getElementById('blog-form').style.display = 'block';
+    document.getElementById('author-form').style.display = 'block';
+    document.getElementById('edit-section').style.display = 'none';
+  });
 
 async function deleteBlog(id) {
   await fetch(`${API_URL}/api/blogs/${id}`, { method: 'DELETE' });
